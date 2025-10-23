@@ -21,6 +21,7 @@
     user-select:none; cursor:grab; display:inline-flex; align-items:center; gap:.35rem;
     padding:.25rem .5rem; margin:.25rem .25rem .25rem 0; border:1px solid #e5e7eb; border-radius:.4rem; background:#f8fafc;
   }
+  .people-item.nodrag { cursor:default; }
   .people-item:active{ cursor:grabbing; }
   .dropping{ background:#e7f1ff; border-color:#86b7fe; }
   .slot-list .list-group-item.active{ background:#0d6efd; border-color:#0d6efd; }
@@ -137,6 +138,11 @@
               <i class="fa-solid fa-table-list"></i> 設定本專案時段
             </button>
           </div>
+          <!-- 新增：編輯職位開關 -->
+          <div class="form-check form-switch ms-2">
+            <input class="form-check-input" type="checkbox" id="toggleEditRoles" checked>
+            <label class="form-check-label small" for="toggleEditRoles">編輯職位</label>
+          </div>
         </div>
         <div class="card-body sidebar">
           <div id="slotList" class="slot-list"></div>
@@ -153,6 +159,7 @@
             <span id="focusTitle" class="badge text-bg-info"></span>
             <span id="focusTime" class="badge text-bg-dark badge-time"></span>
             <span id="focusDup" class="badge text-bg-warning"></span>
+            <span id="focusEditMode" class="badge"></span>
           </div>
           <div class="d-flex flex-wrap gap-2">
             <button id="btnSlotRolesPeople" class="btn btn-warning">
@@ -170,7 +177,7 @@
       </div>
     </div>
 
-    <!-- 右：人員池（可完全隱藏；左中自動補寬） -->
+    <!-- 右：人員池 -->
     <div class="col-lg-3" id="rightCol">
       <div class="card h-100 right-card-slide">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -180,7 +187,7 @@
               <input id="peopleSearch" type="text" class="form-control" placeholder="輸入姓名過濾">
             </div>
             <div class="small-muted mt-1">
-              單擊姓名可查看此人於本專案安排；雙擊或點 <i class="fa-solid fa-xmark"></i> 退回池；可拖曳至中間職位。
+              單擊姓名可查看此人於本專案安排；雙擊或點 <i class="fa-solid fa-xmark"></i> 退回池；可拖曳至中間職位（僅在「編輯職位」開啟時）。
             </div>
           </div>
         </div>
@@ -345,6 +352,9 @@
 </div>
 
 <script>
+/* ==== 0) 全域狀態：編輯職位模式 ==== */
+let editRolesEnabled = true; // 由左欄開關控制
+
 /* ==== 1) 預設人員清單 ==== */
 const DEFAULT_PEOPLE = [
   "劉忠語","柯升硯","吳妍慧","柯知澈","蔡昀哲","邱炫瑋","邱思榕","吳宇樺","江鎮庭",
@@ -360,7 +370,7 @@ let SLOTS = [
 ];
 // assignments[slotIdx][roleIdx] = string[]  （多人）
 let assignments = [];
-let PROJECT_PEOPLE = {}; // { [projectName]: ["張三","李四",...] }
+let PROJECT_PEOPLE = {};
 let focusIdx = 0;
 
 /* ==== 3) 工具 ==== */
@@ -396,29 +406,26 @@ function getPeopleForProject(project){
   return PROJECT_PEOPLE[project];
 }
 
-/* ==== 3.1) 人員池智慧更新工具 ==== */
+/* ==== 3.1) 人員池智慧更新 ==== */
 function ensurePoolHas(name){
-  // 僅當前焦點時段的人員池才更新；且要在專案名單內
   const s = SLOTS[focusIdx]; if(!s) return;
   const list = getPeopleForProject(s.project);
   if(!list.includes(name)) return;
   if($(`#peoplePool .people-item[data-person="${name}"]`).length===0){
     $("#peoplePool").append(personChip(name));
+    applyDraggableToAllChips(); // 套用當前模式
   }
 }
 function removePoolChip(name){
   $(`#peoplePool .people-item[data-person="${name}"]`).remove();
 }
 function updatePoolChipVisibilityFor(slotIdx, name){
-  // 只在「目前聚焦 = slotIdx」時才調整池
   if(focusIdx !== slotIdx) return;
   const s = SLOTS[slotIdx]; if(!s) return;
   const used = personAlreadyInSlot(name, slotIdx);
   if(s.allowDupInSlot){
-    // 允許重複 → 一律顯示（方便再拖）
     ensurePoolHas(name);
   }else{
-    // 不允許重複 → 已使用則移除，未使用則顯示
     if(used) removePoolChip(name); else ensurePoolHas(name);
   }
 }
@@ -429,24 +436,58 @@ function personChip(name){
       <button class="btn btn-light btn-sm" title="退回人員池"><i class="fa-solid fa-xmark"></i></button>
       <span>${name}</span>
     </div>`);
-  $el.on("dragstart", dragStart);
 
+  // 拖曳開始：若在檢視模式則禁止拖曳
+  $el.on("dragstart", function(e){
+    if(!editRolesEnabled){ e.preventDefault(); return; }
+    dragStart.call(this, e);
+  });
+
+  // 單擊：不論模式都可以看個人安排
   $el.on("click", function(){
     const self = this;
-    const t = setTimeout(()=> openPersonModal(name), 180);
+    const who = $(self).data("person");
+    const t = setTimeout(()=> openPersonModal(who), 160);
     $(self).data("click-timer", t);
   });
+
+  // 雙擊：只有編輯模式才允許退回池
   $el.on("dblclick", function(){
     const t = $(this).data("click-timer"); if(t) clearTimeout(t);
+    if(!editRolesEnabled) return; // 檢視模式不做移動
     moveChipToPool($(this));
   });
 
+  // 叉叉：只有編輯模式才允許
   $el.find("button").on("click", (e)=>{
     e.stopPropagation();
+    if(!editRolesEnabled) return;
     moveChipToPool($el);
   });
 
+  // 依模式調整可拖曳/游標/叉叉顯示
+  if(!editRolesEnabled){
+    $el.attr("draggable", false).addClass("nodrag");
+    $el.find("button").hide();
+  }else{
+    $el.attr("draggable", true).removeClass("nodrag");
+    $el.find("button").show();
+  }
+
   return $el;
+}
+
+function applyDraggableToAllChips(){
+  $(".people-item").each(function(){
+    const $chip=$(this);
+    if(!editRolesEnabled){
+      $chip.attr("draggable", false).addClass("nodrag");
+      $chip.find("button").hide();
+    }else{
+      $chip.attr("draggable", true).removeClass("nodrag");
+      $chip.find("button").show();
+    }
+  });
 }
 
 function buildPeoplePool(){
@@ -463,6 +504,7 @@ function buildPeoplePool(){
       pool.append(personChip(n));
     }
   });
+  applyDraggableToAllChips();
 }
 
 function buildSlotList(){
@@ -501,23 +543,31 @@ function renderFocus(){
   $("#focusTitle").text(s ? (s.title || "（無時段名）") : "");
   $("#focusTime").text(s ? timeLabel(s) : "無");
   $("#focusDup").text(s?.allowDupInSlot ? "允許同時段重複人員" : "同時段不可重複人員");
+  $("#focusEditMode")
+    .text(editRolesEnabled ? "編輯模式" : "檢視模式")
+    .removeClass("text-bg-secondary text-bg-success")
+    .addClass(editRolesEnabled ? "text-bg-success" : "text-bg-secondary");
 
   const grid = $("#roleGrid").empty();
   if(!s || s.roles.length===0){ $("#emptyHint").show(); return; }
   $("#emptyHint").hide();
 
   s.roles.forEach((role, rIdx)=>{
+    const actions = editRolesEnabled ? `
+          <button class="icon-btn" title="改名" data-rename="${rIdx}"><i class="fa-solid fa-pen"></i></button>
+          <button class="icon-btn" title="刪除此職位" data-del="${rIdx}"><i class="fa-solid fa-trash"></i></button>
+        ` : ``;
+
     const card = $(`
       <div class="role-card">
         <div class="role-title">
           <span class="fw-semibold me-auto"><i class="fa-solid fa-briefcase me-1"></i>${role}</span>
-          <button class="icon-btn" title="改名" data-rename="${rIdx}"><i class="fa-solid fa-pen"></i></button>
-          <button class="icon-btn" title="刪除此職位" data-del="${rIdx}"><i class="fa-solid fa-trash"></i></button>
+          ${actions}
         </div>
         <div class="drop-box" data-drop="role" data-slot-idx="${focusIdx}" data-role-idx="${rIdx}">
-          <div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>拖曳人員到這裡</div>
+          <div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>${editRolesEnabled ? '拖曳人員到這裡' : '目前為檢視模式'}</div>
         </div>
-        <div class="role-hint">（同職位可多人，拖曳多次即可）</div>
+        <div class="role-hint">（同職位可多人；拖曳需開啟「編輯職位」）</div>
       </div>
     `);
     grid.append(card);
@@ -529,36 +579,39 @@ function renderFocus(){
     box.empty();
     const list = (arr||[]);
     if(list.length===0){
-      box.append(`<div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>拖曳人員到這裡</div>`);
+      box.append(`<div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>${editRolesEnabled ? '拖曳人員到這裡' : '目前為檢視模式'}</div>`);
     }else{
       list.forEach(name => box.append(personChip(name)));
     }
   });
 
-  // 改名/刪除
-  grid.find("[data-rename]").on("click", function(){
-    const r = +$(this).data("rename");
-    const cur = SLOTS[focusIdx].roles[r];
-    const n = prompt("修改職位名稱：", cur);
-    if(n && n.trim()){
-      SLOTS[focusIdx].roles[r] = n.trim();
-      renderFocus(); buildSlotList();
-    }
-  });
-  grid.find("[data-del]").on("click", function(){
-    const r = +$(this).data("del");
-    const roleName = SLOTS[focusIdx].roles[r];
-    if(!confirm(`確定刪除職位「${roleName}」？`)) return;
-    (assignments[focusIdx][r]||[]).forEach(n=> moveNameToPoolDOM(n));
-    SLOTS[focusIdx].roles.splice(r,1);
-    assignments[focusIdx].splice(r,1);
-    renderFocus(); buildSlotList(); buildPeoplePool();
-  });
+  // 改名/刪除（僅編輯模式可用）
+  if(editRolesEnabled){
+    grid.find("[data-rename]").on("click", function(){
+      const r = +$(this).data("rename");
+      const cur = SLOTS[focusIdx].roles[r];
+      const n = prompt("修改職位名稱：", cur);
+      if(n && n.trim()){
+        SLOTS[focusIdx].roles[r] = n.trim();
+        renderFocus(); buildSlotList();
+      }
+    });
+    grid.find("[data-del]").on("click", function(){
+      const r = +$(this).data("del");
+      const roleName = SLOTS[focusIdx].roles[r];
+      if(!confirm(`確定刪除職位「${roleName}」？`)) return;
+      (assignments[focusIdx][r]||[]).forEach(n=> moveNameToPoolDOM(n));
+      SLOTS[focusIdx].roles.splice(r,1);
+      assignments[focusIdx].splice(r,1);
+      renderFocus(); buildSlotList(); buildPeoplePool();
+    });
+  }
 
   enableDnD();
+  applyDraggableToAllChips();
 }
 
-/* ==== 5) 拖放規則（跨時段搬家 + 更聰明的人員池顯示） ==== */
+/* ==== 5) 拖放規則（含跨時段搬家 + 智慧人員池） ==== */
 let dragData=null;
 function dragStart(e){
   const name = $(this).data("person");
@@ -575,10 +628,15 @@ function findParentBox(el){
 }
 function enableDnD(){
   $("[data-drop]").each(function(){
-    this.addEventListener("dragover", ev=>{ ev.preventDefault(); $(this).addClass("dropping"); });
+    this.addEventListener("dragover", ev=>{
+      if(!editRolesEnabled) return; // 檢視模式不允許拖曳
+      ev.preventDefault(); $(this).addClass("dropping");
+    });
     this.addEventListener("dragleave", ev=>{ $(this).removeClass("dropping"); });
     this.addEventListener("drop", ev=>{
-      ev.preventDefault(); $(this).removeClass("dropping");
+      $(this).removeClass("dropping");
+      if(!editRolesEnabled) return;
+      ev.preventDefault();
       const t = this.dataset.drop;
       const name = dragData?.name;
       if(!name) return;
@@ -606,32 +664,25 @@ function assignToRole(name, sIdx, rIdx){
   const fromRoleIdx = isFromRole ? dragData.from.roleIdx : -1;
   const isMoveWithinSameSlot = isFromRole && (fromSlotIdx === sIdx);
 
-  // 同職位→同職位（完全相同格）不動作
   if(isMoveWithinSameSlot && fromRoleIdx === rIdx) return;
 
-  // 同時段內搬家：先從來源職位移除，之後不再觸發「同時段重複」阻擋
   if(isMoveWithinSameSlot){
     const srcList = assignments[sIdx][fromRoleIdx] || [];
     const p = srcList.indexOf(name);
     if(p>-1) srcList.splice(p,1);
     assignments[sIdx][fromRoleIdx] = srcList;
-    // 來源格 UI 更新
     const srcBox = $(`[data-slot-idx="${sIdx}"][data-role-idx="${fromRoleIdx}"]`).empty();
     if(srcList.length===0){
-      srcBox.append(`<div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>拖曳人員到這裡</div>`);
+      srcBox.append(`<div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>${editRolesEnabled ? '拖曳人員到這裡' : '目前為檢視模式'}</div>`);
     }else{
       srcList.forEach(n=> srcBox.append(personChip(n)));
     }
-    // 來源=目前焦點時段 → 更新池（來源時段的規則）
     updatePoolChipVisibilityFor(sIdx, name);
   }else{
-    // 從池拖入或跨時段移動：
-    // 1) 若目標時段不允許重複且該人已在此時段其它職位，擋下
     if(!allowDup && personAlreadyInSlot(name, sIdx)){
       alert(`此時段已指派 ${name} 到其他職位（本時段不允許重複人員）。`);
       return;
     }
-    // 2) 若來自「其他時段」的職位，先從來源刪除，並按來源規則更新「目前焦點=來源時段」的人員池
     if(isFromRole && fromSlotIdx !== sIdx){
       const src = assignments[fromSlotIdx][fromRoleIdx] || [];
       const p = src.indexOf(name);
@@ -639,36 +690,28 @@ function assignToRole(name, sIdx, rIdx){
       assignments[fromSlotIdx][fromRoleIdx] = src;
       const srcBox = $(`[data-slot-idx="${fromSlotIdx}"][data-role-idx="${fromRoleIdx}"]`).empty();
       if(src.length===0){
-        srcBox.append(`<div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>拖曳人員到這裡</div>`);
+        srcBox.append(`<div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>${editRolesEnabled ? '拖曳人員到這裡' : '目前為檢視模式'}</div>`);
       }else{
         src.forEach(n=> srcBox.append(personChip(n)));
       }
-      // 如果目前聚焦剛好等於來源時段，依來源時段的規則決定是否顯示/移除池中籌碼
       updatePoolChipVisibilityFor(fromSlotIdx, name);
     }
   }
 
-  // 同一職位避免重複同一人
   const list = assignments[sIdx][rIdx] || [];
   if(list.includes(name)){
     alert(`職位「${SLOTS[sIdx].roles[rIdx]}」已包含 ${name}。`);
     return;
   }
 
-  // 寫入目標職位
   list.push(name);
   assignments[sIdx][rIdx] = list;
 
-  // 更新目標職位盒
   const box = $(`[data-slot-idx="${sIdx}"][data-role-idx="${rIdx}"]`).empty();
   (assignments[sIdx][rIdx]||[]).forEach(n => box.append(personChip(n)));
 
-  // 目標=目前焦點時段 → 依目標時段規則更新人員池
   updatePoolChipVisibilityFor(sIdx, name);
 
-  // 來源若是「池」：
-  // - 允許同時段重複：保留池中籌碼（可再拖一次）
-  // - 不允許：移除池中籌碼（此人已被本時段使用）
   if(dragData?.from?.type==="pool"){
     if(!allowDup && focusIdx === sIdx){
       removePoolChip(name);
@@ -677,7 +720,6 @@ function assignToRole(name, sIdx, rIdx){
 }
 
 function moveToPool(name){
-  // 拖到池：如果是由職位拖回，移除此實例；若原本就池中，無事
   if(dragData?.from?.type==="role"){
     const {slotIdx, roleIdx} = dragData.from;
     const L = assignments[slotIdx][roleIdx] || [];
@@ -685,17 +727,14 @@ function moveToPool(name){
     if(pos>-1) L.splice(pos,1);
     const box = $(`[data-slot-idx="${slotIdx}"][data-role-idx="${roleIdx}"]`).empty();
     if((assignments[slotIdx][roleIdx]||[]).length===0){
-      box.append(`<div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>拖曳人員到這裡</div>`);
+      box.append(`<div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>${editRolesEnabled ? '拖曳人員到這裡' : '目前為檢視模式'}</div>`);
     }else{
       (assignments[slotIdx][roleIdx]||[]).forEach(n=> box.append(personChip(n)));
     }
-    // 來源=目前焦點 → 依來源時段規則更新池
     updatePoolChipVisibilityFor(slotIdx, name);
   }
-  // 從池到池不需處理；若來源就是池，保持現狀
 }
 
-/* 支援「按叉叉」或「雙擊」從職位移回池（移除該實例），並智慧更新池 */
 function moveChipToPool($chip){
   const name = $chip.data("person");
   const roleBox = $chip.closest(".drop-box");
@@ -707,19 +746,16 @@ function moveChipToPool($chip){
     if(pos>-1) L.splice(pos,1);
     roleBox.empty();
     if(L.length===0){
-      roleBox.append(`<div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>拖曳人員到這裡</div>`);
+      roleBox.append(`<div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>${editRolesEnabled ? '拖曳人員到這裡' : '目前為檢視模式'}</div>`);
     }else{
       L.forEach(n=> roleBox.append(personChip(n)));
     }
-    // 來源=目前焦點 → 依來源時段規則更新池
     updatePoolChipVisibilityFor(sIdx, name);
   }
   $chip.remove();
 }
 
-function moveNameToPoolDOM(name){
-  ensurePoolHas(name);
-}
+function moveNameToPoolDOM(name){ ensurePoolHas(name); }
 
 /* ==== 6) 個人安排 Modal ==== */
 function openPersonModal(who){
@@ -762,7 +798,6 @@ function saveProjectPeople(){
   const uniq = [...new Set(raw)];
   PROJECT_PEOPLE[s.project] = uniq;
 
-  // 移除不在名單中的指派（僅此專案）
   SLOTS.forEach((slot, i)=>{
     if(slot.project !== s.project) return;
     (assignments[i]||[]).forEach((arr, rIdx)=>{
@@ -808,7 +843,6 @@ function saveProjectSlots(){
 
   if(!confirm(`將以 ${rows.length} 個時段「替換」專案「${pj}」的所有時段與指派，確定嗎？`)) return;
 
-  // 移除舊的此專案時段
   const keepS=[], keepA=[];
   for(let i=0;i<SLOTS.length;i++){
     if(SLOTS[i].project!==pj){ keepS.push(SLOTS[i]); keepA.push(assignments[i]||[]); }
@@ -816,7 +850,6 @@ function saveProjectSlots(){
   SLOTS = keepS;
   assignments = keepA;
 
-  // 加入新的（空職位、無指派）
   parsed.forEach(obj=>{
     SLOTS.push(obj);
     assignments.push([]);
@@ -884,15 +917,18 @@ function saveSlotRolesPeople(){
 }
 
 /* ==== 10) 匯出（JSON / CSV） ==== */
-const LS_KEY="dragRoster.pwa.smartpool.v3";
-function getSnapshot(){ return {SLOTS, assignments, PROJECT_PEOPLE, focusIdx}; }
+const LS_KEY="dragRoster.pwa.smartpool.editToggle.v4";
+function getSnapshot(){ return {SLOTS, assignments, PROJECT_PEOPLE, focusIdx, editRolesEnabled}; }
 function setSnapshot(snap){
   if(!snap || !Array.isArray(snap.SLOTS) || !Array.isArray(snap.assignments)) return false;
   SLOTS = snap.SLOTS.map(s => ({...s, allowDupInSlot: !!s.allowDupInSlot}));
   PROJECT_PEOPLE = snap.PROJECT_PEOPLE || {};
   assignments = snap.assignments.map((arr, idx)=> normalizeAssignArray(SLOTS[idx], arr));
   focusIdx = Math.min(snap.focusIdx ?? 0, SLOTS.length-1);
+  editRolesEnabled = (snap.editRolesEnabled !== undefined) ? !!snap.editRolesEnabled : true;
+  $('#toggleEditRoles').prop('checked', editRolesEnabled);
   rebuildAll();
+  applyEditRolesMode();
   return true;
 }
 function toCSV(){
@@ -911,7 +947,7 @@ function toCSV(){
     return str;
   };
   const csv = rows.map(r=> r.map(esc).join(",")).join("\n");
-  return "\uFEFF" + csv; // UTF-8 BOM
+  return "\uFEFF" + csv;
 }
 
 /* ==== 11) 一般控制 ==== */
@@ -920,6 +956,7 @@ function rebuildAll(){
   buildSlotList();
   renderFocus();
   buildPeoplePool();
+  applyEditRolesMode();
 }
 function openEditSlotModal(idx){
   $("#editSlotIndex").val(idx);
@@ -930,6 +967,19 @@ function openEditSlotModal(idx){
   $("#editEnd").val(SLOTS[idx].end);
   $("#editAllowDup").prop("checked", !!SLOTS[idx].allowDupInSlot);
   new bootstrap.Modal(document.getElementById('editSlotModal')).show();
+}
+
+/* ==== 11.1) 編輯職位模式套用 ==== */
+function applyEditRolesMode(){
+  // 中間按鈕狀態
+  $("#btnAddRole").prop("disabled", !editRolesEnabled);
+  $("#btnSlotRolesPeople").prop("disabled", !editRolesEnabled);
+  // 角色區重新套用（顯示/隱藏改名、刪除按鈕）
+  $("#focusEditMode")
+    .text(editRolesEnabled ? "編輯模式" : "檢視模式")
+    .removeClass("text-bg-secondary text-bg-success")
+    .addClass(editRolesEnabled ? "text-bg-success" : "text-bg-secondary");
+  applyDraggableToAllChips();
 }
 
 /* ==== 12) 右欄顯示/隱藏與欄寬調整 ==== */
@@ -960,16 +1010,20 @@ $("#projectPeopleForm").on("submit", function(e){ e.preventDefault(); saveProjec
 $("#btnProjectSlots").on("click", openProjectSlotsModal);
 $("#projectSlotsForm").on("submit", function(e){ e.preventDefault(); saveProjectSlots(); });
 
-$("#btnSlotRolesPeople").on("click", openSlotRolesPeopleModal);
+$("#btnSlotRolesPeople").on("click", function(){
+  if(!editRolesEnabled){ alert("目前為檢視模式，請先開啟「編輯職位」。"); return; }
+  openSlotRolesPeopleModal();
+});
 $("#slotRolesPeopleForm").on("submit", function(e){ e.preventDefault(); saveSlotRolesPeople(); });
 
 $("#btnAddRole").on("click", ()=>{
+  if(!editRolesEnabled){ alert("目前為檢視模式，請先開啟「編輯職位」。"); return; }
   if(!SLOTS.length) return;
   const name = prompt("新增職位名稱：");
   if(!name) return;
   SLOTS[focusIdx].roles.push(name.trim());
   assignments[focusIdx].push([]);
-  renderFocus(); buildSlotList();
+  renderFocus(); buildSlotList(); applyEditRolesMode();
 });
 $("#btnEditSlot").on("click", ()=> { if(SLOTS.length) openEditSlotModal(focusIdx); });
 $("#btnDelSlot").on("click", ()=>{
@@ -981,6 +1035,13 @@ $("#btnDelSlot").on("click", ()=>{
   assignments.splice(focusIdx,1);
   focusIdx = Math.max(0, focusIdx-1);
   rebuildAll();
+});
+
+/* 左欄：編輯職位開關 */
+$("#toggleEditRoles").on("change", function(){
+  editRolesEnabled = $(this).is(":checked");
+  applyEditRolesMode();
+  renderFocus(); // 重新渲染職位卡，顯示/隱藏動作鈕與提示
 });
 
 $("#editSlotForm").on("submit", function(e){
