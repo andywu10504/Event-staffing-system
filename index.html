@@ -7,9 +7,12 @@
 <meta name="theme-color" content="#0d6efd">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+
 <style>
   body { background:#f6f8fb; }
   .sidebar { max-height: calc(100vh - 160px); overflow:auto; }
@@ -53,6 +56,8 @@
   .collapse-btn:hover{ color:#0d6efd; }
   .role-hint { font-size:.8rem; color:#94a3b8; margin-top:.3rem; }
   .form-check .form-check-input { cursor:pointer; }
+
+  /* Navbar 補強：右側工具按鈕群組在小螢幕改垂直 */
   @media (max-width: 991.98px){
     .navbar-tools .btn{ width:100%; text-align:left; }
     .navbar-tools .btn + .btn{ margin-top:.4rem; }
@@ -61,7 +66,7 @@
 </head>
 <body class="p-0">
 
-<!-- ===== 全域工具列：Bootstrap Navbar ===== -->
+<!-- ===== 全域工具列：Navbar ===== -->
 <nav class="navbar navbar-expand-lg bg-body-tertiary shadow-sm sticky-top" data-bs-theme="light">
   <div class="container-fluid">
     <a class="navbar-brand fw-semibold" href="#">
@@ -91,15 +96,15 @@
 </nav>
 
 <div class="container-fluid p-3">
-  <!-- 新增時段（可收納） -->
+  <!-- 新增時段（預設收合） -->
   <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
       <div class="fw-semibold"><i class="fa-solid fa-plus me-2"></i>新增時段</div>
-      <button class="collapse-btn" data-bs-toggle="collapse" data-bs-target="#addCollapse" aria-expanded="true" title="收合/展開">
-        <i class="fa-solid fa-chevron-up"></i>
+      <button class="collapse-btn" data-bs-toggle="collapse" data-bs-target="#addCollapse" aria-expanded="false" title="收合/展開">
+        <i id="addCollapseIcon" class="fa-solid fa-chevron-down"></i>
       </button>
     </div>
-    <div id="addCollapse" class="collapse show">
+    <div id="addCollapse" class="collapse">
       <div class="card-body">
         <form id="addForm" class="row g-2 align-items-end">
           <div class="col-md-3">
@@ -145,19 +150,25 @@
     <!-- 左：時段清單 -->
     <div class="col-lg-3" id="leftCol">
       <div class="card h-100">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <div class="d-flex align-items-center gap-2 flex-wrap">
-            <span><i class="fa-solid fa-list me-1"></i>時段清單</span>
-            <button id="btnProjectPeople" class="btn btn-warning btn-sm">
-              <i class="fa-solid fa-user-group"></i> 設定本專案人員
-            </button>
-            <button id="btnProjectSlots" class="btn btn-dark btn-sm">
-              <i class="fa-solid fa-table-list"></i> 設定本專案時段
-            </button>
+        <div class="card-header">
+          <!-- 第1行：只放標題 -->
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="fw-semibold"><i class="fa-solid fa-list me-2"></i>時段清單</span>
           </div>
-          <div class="form-check form-switch ms-2">
-            <input class="form-check-input" type="checkbox" id="toggleEditRoles" checked>
-            <label class="form-check-label small" for="toggleEditRoles">編輯職位</label>
+          <!-- 第2行：按鈕 + 開關 -->
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <button id="btnProjectPeople" class="btn btn-warning btn-sm">
+                <i class="fa-solid fa-user-group"></i> 設定本專案人員
+              </button>
+              <button id="btnProjectSlots" class="btn btn-dark btn-sm">
+                <i class="fa-solid fa-table-list"></i> 設定本專案時段
+              </button>
+            </div>
+            <div class="form-check form-switch ms-2">
+              <input class="form-check-input" type="checkbox" id="toggleEditRoles" checked>
+              <label class="form-check-label small" for="toggleEditRoles">編輯職位</label>
+            </div>
           </div>
         </div>
         <div class="card-body sidebar">
@@ -166,20 +177,23 @@
       </div>
     </div>
 
-    <!-- 中：聚焦時段工作台（按鈕在第3行） -->
+    <!-- 中：聚焦時段工作台（按鈕在第三行） -->
     <div class="col-lg-6" id="centerCol">
       <div class="card h-100">
         <div class="card-header">
+          <!-- 第1行 -->
           <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
             <span id="focusProject" class="badge text-bg-secondary"></span>
             <span id="focusTitle" class="badge text-bg-info"></span>
             <span id="focusTime" class="badge text-bg-dark badge-time"></span>
           </div>
+          <!-- 第2行 -->
           <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
             <span id="focusDup" class="badge text-bg-warning"></span>
             <span id="focusEditMode" class="badge"></span>
             <span class="small-muted"><i class="fa-solid fa-triangle-exclamation me-1"></i>同一時段不可重複同一人（若未勾選「允許重複」）。</span>
           </div>
+          <!-- 第3行 -->
           <div class="d-flex flex-wrap gap-2">
             <button id="btnSlotRolesPeople" class="btn btn-warning">
               <i class="fa-solid fa-clipboard-list"></i> 設定職位與人員
@@ -218,12 +232,158 @@
   </div>
 </div>
 
+<!-- 右側浮動把手 -->
 <button id="drawerHandle" class="drawer-handle" title="顯示/隱藏人員池">
   <i class="fa-solid fa-user-group me-1"></i><i id="drawerIcon" class="fa-solid fa-angles-right"></i>
 </button>
 
-<!-- ===== Modals（略，與你提供版本相同） ===== -->
-<!-- 下面保留你原本的所有 Modal 原樣，不再重貼 -->
+<!-- ===== Modals（沿用） ===== -->
+<!-- 編輯時段 Modal -->
+<div class="modal fade" id="editSlotModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="editSlotForm">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-pen-to-square me-1"></i>編輯時段</h5>
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body row g-2">
+          <input type="hidden" id="editSlotIndex">
+          <div class="col-12">
+            <label class="form-label">專案名稱</label>
+            <input type="text" id="editProject" class="form-control" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label">時段名稱</label>
+            <input type="text" id="editTitle" class="form-control" placeholder="例如：開場、典禮、彩排…">
+          </div>
+          <div class="col-6">
+            <label class="form-label">日期</label>
+            <input type="date" id="editDate" class="form-control" required>
+          </div>
+          <div class="col-3">
+            <label class="form-label">開始</label>
+            <input type="time" id="editStart" class="form-control" required>
+          </div>
+          <div class="col-3">
+            <label class="form-label">結束</label>
+            <input type="time" id="editEnd" class="form-control" required>
+          </div>
+          <div class="col-12 mt-1">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="editAllowDup">
+              <label class="form-check-label" for="editAllowDup">允許同時段重複人員</label>
+            </div>
+          </div>
+          <div class="col-12 small-muted">儲存後會依「日期 + 開始時間」重新排序。</div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa-solid fa-ban"></i> 取消</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> 儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 專案人員設定 Modal -->
+<div class="modal fade" id="projectPeopleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="projectPeopleForm">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-user-group me-1"></i>設定本專案人員</h5>
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="small-muted mb-2">每行一個姓名；只會在此專案的人員池顯示。若移除某人，該人在此專案的指派會被清空。</div>
+          <textarea id="projectPeopleText" class="form-control" rows="10" placeholder="每行一個姓名"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa-solid fa-ban"></i> 取消</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> 儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 本專案時段設定 Modal（批次替換） -->
+<div class="modal fade" id="projectSlotsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="projectSlotsForm">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-table-list me-1"></i>設定本專案時段（批次替換）</h5>
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-warning p-2">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i>
+            儲存後會<strong>替換</strong>目前專案的所有時段（會清除該專案原有職位與指派）。請先匯出或儲存備份。
+          </div>
+          <div class="small-muted mb-2">
+            每行格式：<code>YYYY-MM-DD, HH:mm, HH:mm, 時段名稱</code><br>
+            例：<code>2025-10-25, 09:00, 10:00, 開場</code>
+          </div>
+          <textarea id="projectSlotsText" class="form-control" rows="12" placeholder="2025-10-25, 09:00, 10:00, 開場&#10;2025-10-25, 10:10, 11:00, 典禮"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa-solid fa-ban"></i> 取消</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> 儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 單一時段：設定職位與人員（多人以 ; 或 | 分隔） -->
+<div class="modal fade" id="slotRolesPeopleModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="slotRolesPeopleForm">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fa-solid fa-clipboard-list me-1"></i>設定職位與人員</h5>
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="small-muted mb-2">
+            請以「<b>職位,人名</b>」一行一筆；人名可留空。多人用 <code>;</code> 或 <code>|</code> 分隔。<br>
+            例：<code>主持,張三;李四</code>、<code>攝影,</code>
+          </div>
+          <textarea id="slotRolesPeopleText" class="form-control" rows="12" placeholder="主持,張三;李四&#10;攝影,王五&#10;導播,"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa-solid fa-ban"></i> 取消</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> 儲存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 個人安排 Modal -->
+<div class="modal fade" id="personModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-user me-1"></i><span id="personModalName"></span> 的本專案安排</h5>
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr><th>專案</th><th>時段名稱</th><th>日期</th><th>時間</th><th>職位</th></tr>
+            </thead>
+            <tbody id="personModalBody"></tbody>
+          </table>
+        </div>
+        <div id="personModalEmpty" class="small text-muted">此人在本專案尚未被指派。</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ==== 0) 全域狀態：編輯職位模式 ==== */
@@ -308,24 +468,23 @@ function personChip(name){
       <span>${name}</span>
     </div>`);
 
+  // 拖拉只在編輯模式開啟時啟用；但「點擊＝檢視安排」永遠有效（含檢視模式）
   $el.on("dragstart", function(e){
     if(!editRolesEnabled){ e.preventDefault(); return; }
     dragStart.call(this, e);
   });
 
+  // 點擊 → 一律開個人安排（檢視模式也可以）
   $el.on("click", function(){
-    const self = this;
-    const who = $(self).data("person");
-    const t = setTimeout(()=> openPersonModal(who), 160);
-    $(self).data("click-timer", t);
+    const who = $(this).data("person");
+    openPersonModal(who);
   });
 
+  // 雙擊 / 叉叉 → 僅在可編輯時才允許
   $el.on("dblclick", function(){
-    const t = $(this).data("click-timer"); if(t) clearTimeout(t);
     if(!editRolesEnabled) return;
     moveChipToPool($(this));
   });
-
   $el.find("button").on("click", (e)=>{
     e.stopPropagation();
     if(!editRolesEnabled) return;
@@ -359,7 +518,6 @@ function buildPeoplePool(){
   const pool = $("#peoplePool").empty();
   const s = SLOTS[focusIdx]; if(!s) return;
   const list = getPeopleForProject(s.project);
-
   const used = new Set();
   if(!s.allowDupInSlot){
     (assignments[focusIdx] || []).forEach(arr => (arr||[]).forEach(n => used.add(n)));
@@ -432,6 +590,7 @@ function renderFocus(){
         <div class="drop-box" data-drop="role" data-slot-idx="${focusIdx}" data-role-idx="${rIdx}">
           <div class="role-empty"><i class="fa-regular fa-hand-pointer me-1"></i>${editRolesEnabled ? '拖曳人員到這裡' : '目前為檢視模式'}</div>
         </div>
+        <div class="role-hint">（同職位可多人；拖曳需開啟「編輯職位」）</div>
       </div>
     `);
     grid.append(card);
@@ -494,9 +653,9 @@ function enableDnD(){
       if(!editRolesEnabled) return;
       ev.preventDefault(); $(this).addClass("dropping");
     });
-    this.addEventListener("dragleave", ev=>{ $(this).removeClass("dropping"); });
+    this.addEventListener("dragleave", ev=>{ $(this).classList && $(this).classList.remove("dropping"); });
     this.addEventListener("drop", ev=>{
-      $(this).removeClass("dropping");
+      $(this).classList && $(this).classList.remove("dropping");
       if(!editRolesEnabled) return;
       ev.preventDefault();
       const t = this.dataset.drop;
@@ -779,7 +938,6 @@ function saveSlotRolesPeople(){
 }
 
 /* ==== 10) 匯出（JSON / CSV） ==== */
-/* 這裡移除重複 LS_KEY 宣告，避免語法錯誤！ */
 function toCSV(){
   const header = ["專案","時段名稱","日期","開始","結束","職位","人員"];
   const rows = [header];
@@ -818,7 +976,7 @@ function openEditSlotModal(idx){
   new bootstrap.Modal(document.getElementById('editSlotModal')).show();
 }
 
-/* ==== 11.1) 編輯職位模式套用 ==== */
+/* 11.1 編輯模式套用 */
 function applyEditRolesMode(){
   $("#btnAddRole").prop("disabled", !editRolesEnabled);
   $("#btnSlotRolesPeople").prop("disabled", !editRolesEnabled);
@@ -829,7 +987,7 @@ function applyEditRolesMode(){
   applyDraggableToAllChips();
 }
 
-/* ==== 12) 右欄顯示/隱藏與欄寬調整 ==== */
+/* ==== 12) 右欄顯示/隱藏 ==== */
 let rightVisible = true;
 function applyLayoutByRightVisibility(){
   const $left = $("#leftCol"), $center = $("#centerCol"), $right = $("#rightCol");
@@ -891,9 +1049,10 @@ $("#toggleEditRoles").on("change", function(){
   renderFocus();
 });
 
-/* ===== 只保留這個 LS_KEY，避免重複宣告 ===== */
-const LS_KEY = "dragRoster.pwa.smartpool.editToggle.navbar.v5";
+/* 一致的 LS_KEY */
+const LS_KEY = "dragRoster.pwa.smartpool.editToggle.navbar.v6";
 
+/* 表單：編輯 / 新增時段 */
 $("#editSlotForm").on("submit", function(e){
   e.preventDefault();
   const idx = +$("#editSlotIndex").val();
@@ -928,16 +1087,10 @@ $("#addForm").on("submit", function(e){
   sortSlots();
   focusIdx = SLOTS.findIndex(s=> s.project===pj && s.title===tl && s.date===d && s.start===st && s.end===ed);
   rebuildAll();
+
+  // 清空表單（保持收合狀態不變）
   $("#inpProject, #inpTitle, #inpDate, #inpStart, #inpEnd, #inpRoles").val("");
   $("#inpAllowDup").prop("checked", false);
-});
-
-$("#peopleSearch").on("input", function(){
-  const q=$(this).val().trim();
-  $("#peoplePool .people-item").each(function(){
-    const name=$(this).data("person");
-    $(this).toggle(name.includes(q));
-  });
 });
 
 /* Navbar 工具：儲存/載入/匯出/匯入/清空 */
@@ -975,6 +1128,15 @@ $("#btnClear").on("click", ()=>{
   rebuildAll();
 });
 
+/* Collapse 圖示同步（新增時段） */
+document.addEventListener('DOMContentLoaded', function(){
+  const el = document.getElementById('addCollapse');
+  if(el){
+    el.addEventListener('shown.bs.collapse', ()=> $('#addCollapseIcon').removeClass('fa-chevron-down').addClass('fa-chevron-up'));
+    el.addEventListener('hidden.bs.collapse', ()=> $('#addCollapseIcon').removeClass('fa-chevron-up').addClass('fa-chevron-down'));
+  }
+});
+
 /* ==== 14) 初始化（PWA 註冊） ==== */
 $(function(){
   assignments = SLOTS.map(s=> Array(s.roles.length).fill(null).map(()=>[]));
@@ -985,15 +1147,14 @@ $(function(){
   buildPeoplePool();
   applyLayoutByRightVisibility();
 
+  // PWA：註冊 Service Worker
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{ /* 忽略錯誤 */ });
   }
 });
 
-/* 小工具：供刪除時段時把已指派的人放回池 */
+/* 小工具與快照 */
 function moveToPoolDOM(name){ moveNameToPoolDOM(name); }
-
-/* Snapshot helpers */
 function getSnapshot(){ return {SLOTS, assignments, PROJECT_PEOPLE, focusIdx, editRolesEnabled}; }
 function setSnapshot(snap){
   if(!snap || !Array.isArray(snap.SLOTS) || !Array.isArray(snap.assignments)) return false;
@@ -1009,7 +1170,7 @@ function setSnapshot(snap){
 }
 </script>
 
-<!-- 直接載入 Bootstrap Bundle（含 Popper） -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<!-- 只載一次 Bootstrap Bundle（含 Popper） -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 </body>
 </html>
