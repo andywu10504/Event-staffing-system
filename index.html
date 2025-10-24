@@ -6,13 +6,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0d6efd">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-
-<!-- Bootstrap CSS -->
+<link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/hfg-gmuend/openmoji@14.0.0/color/192x192/1F46F-200D-2642-FE0F.png">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
-
 <style>
   body { background:#f6f8fb; }
   .sidebar { max-height: calc(100vh - 160px); overflow:auto; }
@@ -29,10 +26,7 @@
   .dropping{ background:#e7f1ff; border-color:#86b7fe; }
   .slot-list .list-group-item.active{ background:#0d6efd; border-color:#0d6efd; }
   .slot-badge{ font-size:.75rem; }
-  .role-grid{
-    display:grid; gap:.75rem;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  }
+  .role-grid{ display:grid; gap:.75rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
   .role-card{ background:#fff; border:1px solid #e5e7eb; border-radius:.6rem; padding:.6rem .6rem .5rem; }
   .role-title{ display:flex; align-items:center; gap:.35rem; margin-bottom:.4rem; color:#475569; font-weight:600; }
   .icon-btn{ border:none; background:transparent; padding:0 .3rem; color:#64748b; }
@@ -56,7 +50,6 @@
   .collapse-btn:hover{ color:#0d6efd; }
   .role-hint { font-size:.8rem; color:#94a3b8; margin-top:.3rem; }
   .form-check .form-check-input { cursor:pointer; }
-
   @media (max-width: 991.98px){
     .navbar-tools .btn{ width:100%; text-align:left; }
     .navbar-tools .btn + .btn{ margin-top:.4rem; }
@@ -65,23 +58,21 @@
 </head>
 <body class="p-0">
 
-<!-- ===== 全域工具列：Navbar ===== -->
+<!-- Navbar -->
 <nav class="navbar navbar-expand-lg bg-body-tertiary shadow-sm sticky-top" data-bs-theme="light">
   <div class="container-fluid">
     <a class="navbar-brand fw-semibold" href="#">
       <i class="fa-solid fa-people-group me-2"></i>人員安排系統
     </a>
-
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarGlobal"
             aria-controls="navbarGlobal" aria-expanded="false" aria-label="切換導覽">
       <span class="navbar-toggler-icon"></span>
     </button>
-
     <div class="collapse navbar-collapse" id="navbarGlobal">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>
       <div class="d-flex gap-2 flex-wrap navbar-tools">
-        <button id="btnSave" class="btn btn-primary btn-sm"><i class="fa-solid fa-floppy-disk"></i>儲存</button>
-        <button id="btnLoad" class="btn btn-secondary btn-sm"><i class="fa-solid fa-rotate"></i>載入</button>
+        <button id="btnSave" class="btn btn-primary btn-sm"><i class="fa-solid fa-floppy-disk"></i>寫入雲端</button>
+        <button id="btnLoad" class="btn btn-secondary btn-sm"><i class="fa-solid fa-cloud-arrow-down"></i>雲端載入</button>
         <button id="btnExportJSON" class="btn btn-success btn-sm"><i class="fa-solid fa-file-export"></i>匯出 JSON</button>
         <button id="btnExportCSV" class="btn btn-info btn-sm"><i class="fa-solid fa-file-csv"></i>匯出 CSV</button>
         <label class="mb-0">
@@ -154,7 +145,7 @@
           <div class="d-flex align-items-center justify-content-between">
             <span class="fw-semibold"><i class="fa-solid fa-list me-2"></i>時段清單</span>
           </div>
-          <!-- 第2行：按鈕 + 開關 -->
+          <!-- 第2行：按鈕 + 編輯開關 -->
           <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mt-2">
             <div class="d-flex align-items-center gap-2 flex-wrap">
               <button id="btnProjectPeople" class="btn btn-warning btn-sm">
@@ -180,19 +171,19 @@
     <div class="col-lg-6" id="centerCol">
       <div class="card h-100">
         <div class="card-header">
-          <!-- 第1行 -->
+          <!-- 第1行：專案 / 時段名稱 / 時間 -->
           <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
             <span id="focusProject" class="badge text-bg-secondary"></span>
             <span id="focusTitle" class="badge text-bg-info"></span>
             <span id="focusTime" class="badge text-bg-dark badge-time"></span>
           </div>
-          <!-- 第2行 -->
+          <!-- 第2行：狀態徽章 / 提示 -->
           <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
             <span id="focusDup" class="badge text-bg-warning"></span>
             <span id="focusEditMode" class="badge"></span>
             <span class="small-muted"><i class="fa-solid fa-triangle-exclamation me-1"></i>同一時段不可重複同一人（若未勾選「允許重複」）。</span>
           </div>
-          <!-- 第3行 -->
+          <!-- 第3行：操作按鈕 -->
           <div class="d-flex flex-wrap gap-2">
             <button id="btnSlotRolesPeople" class="btn btn-warning">
               <i class="fa-solid fa-clipboard-list"></i> 設定職位與人員
@@ -384,8 +375,8 @@
   </div>
 </div>
 
-<!-- ============ 主要邏輯 ============ -->
 <script>
+/* ==== 狀態 ==== */
 let editRolesEnabled = true;
 
 const DEFAULT_PEOPLE = [
@@ -404,9 +395,15 @@ let assignments = [];
 let PROJECT_PEOPLE = {};
 let focusIdx = 0;
 
-/* 工具 */
+/* ==== 工具 ==== */
 function slotKey(s){ return `${s.date} ${s.start}`; }
 function timeLabel(s){ return `${s.date}　${s.start}–${s.end}`; }
+function normalizeAssignArray(slot, arr){
+  const res = (arr||[]).map(x=> Array.isArray(x) ? x.slice() : (x ? [x] : []));
+  while(res.length < slot.roles.length) res.push([]);
+  if(res.length > slot.roles.length) res.length = slot.roles.length;
+  return res;
+}
 function sortSlots(){
   const zipped = SLOTS.map((s,i)=>({s,i}));
   zipped.sort((a,b)=> slotKey(a.s).localeCompare(slotKey(b.s)));
@@ -418,18 +415,9 @@ function sortSlots(){
   });
   SLOTS=newS; assignments=newA;
 }
-function normalizeAssignArray(slot, arr){
-  const res = (arr||[]).map(x=> Array.isArray(x) ? x.slice() : (x ? [x] : []));
-  while(res.length < slot.roles.length) res.push([]);
-  if(res.length > slot.roles.length) res.length = slot.roles.length;
-  return res;
-}
 function groupByDate(){
   const m = {};
-  SLOTS.forEach((s, i)=>{
-    if(!m[s.date]) m[s.date]=[];
-    m[s.date].push({slot:s, idx:i});
-  });
+  SLOTS.forEach((s, i)=>{ if(!m[s.date]) m[s.date]=[]; m[s.date].push({slot:s, idx:i}); });
   return m;
 }
 function getPeopleForProject(project){
@@ -437,7 +425,12 @@ function getPeopleForProject(project){
   return PROJECT_PEOPLE[project];
 }
 
-/* 人員池智慧更新 */
+/* ==== 人員池智慧更新 ==== */
+function personAlreadyInSlot(name, sIdx){
+  const arr = assignments[sIdx] || [];
+  for(const list of arr) if((list||[]).includes(name)) return true;
+  return false;
+}
 function ensurePoolHas(name){
   const s = SLOTS[focusIdx]; if(!s) return;
   const list = getPeopleForProject(s.project);
@@ -456,7 +449,7 @@ function updatePoolChipVisibilityFor(slotIdx, name){
   else{ if(used) removePoolChip(name); else ensurePoolHas(name); }
 }
 
-/* DOM & 互動 */
+/* ==== DOM ==== */
 function personChip(name){
   const $el = $(`<div class="people-item" draggable="true" data-person="${name}">
       <button class="btn btn-light btn-sm" title="退回人員池"><i class="fa-solid fa-xmark"></i></button>
@@ -468,13 +461,18 @@ function personChip(name){
     dragStart.call(this, e);
   });
 
-  // 檢視模式也能點擊查看
-  $el.on("click", function(){ openPersonModal($(this).data("person")); });
+  // 點擊 -> 個人安排（檢視模式/編輯模式都可）
+  $el.on("click", function(){
+    const who = $(this).data("person");
+    openPersonModal(who);
+  });
 
+  // 雙擊 -> 回池（僅在編輯模式）
   $el.on("dblclick", function(){
     if(!editRolesEnabled) return;
     moveChipToPool($(this));
   });
+
   $el.find("button").on("click", (e)=>{
     e.stopPropagation();
     if(!editRolesEnabled) return;
@@ -502,10 +500,12 @@ function applyDraggableToAllChips(){
     }
   });
 }
+
 function buildPeoplePool(){
   const pool = $("#peoplePool").empty();
   const s = SLOTS[focusIdx]; if(!s) return;
   const list = getPeopleForProject(s.project);
+
   const used = new Set();
   if(!s.allowDupInSlot){
     (assignments[focusIdx] || []).forEach(arr => (arr||[]).forEach(n => used.add(n)));
@@ -517,6 +517,7 @@ function buildPeoplePool(){
   });
   applyDraggableToAllChips();
 }
+
 function buildSlotList(){
   const host = $("#slotList").empty();
   const byDate = groupByDate();
@@ -542,9 +543,11 @@ function buildSlotList(){
     host.append(ul);
   });
 }
+
 function buildAssignmentsStruct(){
   assignments = SLOTS.map(s=> Array(s.roles.length).fill(null).map(()=>[]));
 }
+
 function renderFocus(){
   const s = SLOTS[focusIdx];
   $("#focusProject").text(s ? (s.project || "未命名專案") : "");
@@ -617,7 +620,7 @@ function renderFocus(){
   applyDraggableToAllChips();
 }
 
-/* 拖放 */
+/* ==== 拖放 ==== */
 let dragData=null;
 function dragStart(e){
   const name = $(this).data("person");
@@ -655,11 +658,6 @@ function enableDnD(){
       dragData=null;
     });
   });
-}
-function personAlreadyInSlot(name, sIdx){
-  const arr = assignments[sIdx] || [];
-  for(const list of arr) if((list||[]).includes(name)) return true;
-  return false;
 }
 function assignToRole(name, sIdx, rIdx){
   const allowDup = !!SLOTS[sIdx].allowDupInSlot;
@@ -707,13 +705,11 @@ function assignToRole(name, sIdx, rIdx){
     alert(`職位「${SLOTS[sIdx].roles[rIdx]}」已包含 ${name}。`);
     return;
   }
-
   list.push(name);
   assignments[sIdx][rIdx] = list;
 
   const box = $(`[data-slot-idx="${sIdx}"][data-role-idx="${rIdx}"]`).empty();
   (assignments[sIdx][rIdx]||[]).forEach(n => box.append(personChip(n)));
-
   updatePoolChipVisibilityFor(sIdx, name);
 
   if(dragData?.from?.type==="pool"){
@@ -758,7 +754,7 @@ function moveChipToPool($chip){
 }
 function moveNameToPoolDOM(name){ ensurePoolHas(name); }
 
-/* 個人安排 Modal */
+/* ==== 個人安排 ==== */
 function openPersonModal(who){
   const s = SLOTS[focusIdx]; if(!s) return;
   const pj = s.project;
@@ -786,7 +782,7 @@ function openPersonModal(who){
   new bootstrap.Modal(document.getElementById('personModal')).show();
 }
 
-/* 專案人員設定 */
+/* ==== 專案人員設定 ==== */
 function openProjectPeopleModal(){
   const s = SLOTS[focusIdx]; if(!s) { alert("請先建立並選取一個時段。"); return; }
   const list = getPeopleForProject(s.project);
@@ -811,7 +807,7 @@ function saveProjectPeople(){
   bootstrap.Modal.getInstance(document.getElementById('projectPeopleModal')).hide();
 }
 
-/* 本專案時段設定（批次替換） */
+/* ==== 本專案時段（批次替換） ==== */
 function openProjectSlotsModal(){
   const s = SLOTS[focusIdx];
   if(!s){ alert("請先建立並選取一個時段（以取得目標專案）。"); return; }
@@ -862,14 +858,14 @@ function saveProjectSlots(){
   bootstrap.Modal.getInstance(document.getElementById('projectSlotsModal')).hide();
 }
 
-/* 單一時段：設定職位與人員（多人以 ; 或 | 分隔） */
+/* ==== 單一時段：設定職位與人員（多人） ==== */
 function openSlotRolesPeopleModal(){
   const s = SLOTS[focusIdx]; if(!s) return;
   let lines = [];
   const list = s.roles;
   const arr = assignments[focusIdx] || [];
   for(let i=0;i<list.length;i++){
-    const persons = (arr[i]||[]).join(";");
+    const persons = (arr[i]||[]).join(";"); // 顯示為 ;
     lines.push(`${list[i]},${persons}`);
   }
   $("#slotRolesPeopleText").val(lines.join("\n"));
@@ -892,9 +888,7 @@ function saveSlotRolesPeople(){
     else { role = line.slice(0, idx).trim(); personsRaw = line.slice(idx+1).trim(); }
     if(!role){ alert("有一行缺少職位名稱，請修正後再儲存。"); return; }
 
-    let people = personsRaw
-      ? personsRaw.split(/[,;|]/).map(x=>x.trim()).filter(Boolean)
-      : [];
+    let people = personsRaw ? personsRaw.split(/[,;|]/).map(x=>x.trim()).filter(Boolean) : [];
     const uniqueRoleSet = new Set();
     for(const p of people){
       if(!projectList.includes(p)){ alert(`「${p}」不在此專案人員名單中，請先到「設定本專案人員」加入。`); return; }
@@ -917,7 +911,21 @@ function saveSlotRolesPeople(){
   bootstrap.Modal.getInstance(document.getElementById('slotRolesPeopleModal')).hide();
 }
 
-/* 匯出（JSON / CSV）與快照 */
+/* ==== 匯出/快照 ==== */
+const LS_KEY="dragRoster.pwa.smartpool.editToggle.navbar.v6";
+function getSnapshot(){ return {SLOTS, assignments, PROJECT_PEOPLE, focusIdx, editRolesEnabled}; }
+function setSnapshot(snap){
+  if(!snap || !Array.isArray(snap.SLOTS) || !Array.isArray(snap.assignments)) return false;
+  SLOTS = snap.SLOTS.map(s => ({...s, allowDupInSlot: !!s.allowDupInSlot}));
+  PROJECT_PEOPLE = snap.PROJECT_PEOPLE || {};
+  assignments = snap.assignments.map((arr, idx)=> normalizeAssignArray(SLOTS[idx], arr));
+  focusIdx = Math.min(snap.focusIdx ?? 0, SLOTS.length-1);
+  editRolesEnabled = (snap.editRolesEnabled !== undefined) ? !!snap.editRolesEnabled : true;
+  $('#toggleEditRoles').prop('checked', editRolesEnabled);
+  rebuildAll();
+  applyEditRolesMode();
+  return true;
+}
 function toCSV(){
   const header = ["專案","時段名稱","日期","開始","結束","職位","人員"];
   const rows = [header];
@@ -936,21 +944,8 @@ function toCSV(){
   const csv = rows.map(r=> r.map(esc).join(",")).join("\n");
   return "\uFEFF" + csv;
 }
-function getSnapshot(){ return {SLOTS, assignments, PROJECT_PEOPLE, focusIdx, editRolesEnabled}; }
-function setSnapshot(snap){
-  if(!snap || !Array.isArray(snap.SLOTS) || !Array.isArray(snap.assignments)) return false;
-  SLOTS = snap.SLOTS.map(s => ({...s, allowDupInSlot: !!s.allowDupInSlot}));
-  PROJECT_PEOPLE = snap.PROJECT_PEOPLE || {};
-  assignments = snap.assignments.map((arr, idx)=> normalizeAssignArray(SLOTS[idx], arr));
-  focusIdx = Math.min(snap.focusIdx ?? 0, SLOTS.length-1);
-  editRolesEnabled = (snap.editRolesEnabled !== undefined) ? !!snap.editRolesEnabled : true;
-  $('#toggleEditRoles').prop('checked', editRolesEnabled);
-  rebuildAll();
-  applyEditRolesMode();
-  return true;
-}
 
-/* 一般控制 */
+/* ==== 一般控制 ==== */
 function rebuildAll(){
   sortSlots();
   buildSlotList();
@@ -978,7 +973,7 @@ function applyEditRolesMode(){
   applyDraggableToAllChips();
 }
 
-/* 右欄顯示/隱藏 */
+/* ==== 右欄顯示/隱藏 ==== */
 let rightVisible = true;
 function applyLayoutByRightVisibility(){
   const $left = $("#leftCol"), $center = $("#centerCol"), $right = $("#rightCol");
@@ -999,8 +994,7 @@ $("#drawerHandle").on("click", function(){
   applyLayoutByRightVisibility();
 });
 
-/* 綁定事件（localStorage 版本，稍後會被 GAS 橋接覆蓋） */
-const LS_KEY = "dragRoster.pwa.smartpool.editToggle.navbar.v6";
+/* ==== 綁定事件 ==== */
 $("#btnProjectPeople").on("click", openProjectPeopleModal);
 $("#projectPeopleForm").on("submit", function(e){ e.preventDefault(); saveProjectPeople(); });
 
@@ -1081,15 +1075,6 @@ $("#peopleSearch").on("input", function(){
     $(this).toggle(name.includes(q));
   });
 });
-$("#btnSave").on("click", ()=>{ // localStorage 版本（將被 GAS 橋接覆蓋）
-  localStorage.setItem(LS_KEY, JSON.stringify(getSnapshot()));
-  alert("已儲存");
-});
-$("#btnLoad").on("click", ()=>{
-  const txt = localStorage.getItem(LS_KEY);
-  if(!txt) return alert("尚無儲存資料");
-  setSnapshot(JSON.parse(txt)) ? alert("已載入") : alert("格式不符");
-});
 $("#btnExportJSON").on("click", ()=>{
   const blob=new Blob([JSON.stringify(getSnapshot(),null,2)], {type:"application/json"});
   const url=URL.createObjectURL(blob), a=document.createElement("a");
@@ -1107,72 +1092,31 @@ $("#importFile").on("change", function(){
   const f=this.files[0]; if(!f) return;
   const r=new FileReader();
   r.onload=()=>{
-    try{ setSnapshot(JSON.parse(r.result)) ? alert("匯入完成") : alert("匯入失敗"); }
+    try{ setSnapshot(JSON.parse(r.result)) ? alert("匯入完成") : alert("格式不符"); }
     catch{ alert("匯入失敗：非 JSON 或格式錯誤"); }
   };
   r.readAsText(f,'utf-8'); this.value="";
 });
-$("#btnClear").on("click", ()=>{
-  if(!confirm("清空所有安排？")) return;
-  assignments = SLOTS.map(s=> Array(s.roles.length).fill(null).map(()=>[]));
-  rebuildAll();
-});
 
-/* Collapse 圖示同步（新增時段） */
-document.addEventListener('DOMContentLoaded', function(){
-  const el = document.getElementById('addCollapse');
-  if(el){
-    el.addEventListener('shown.bs.collapse', ()=> $('#addCollapseIcon').removeClass('fa-chevron-down').addClass('fa-chevron-up'));
-    el.addEventListener('hidden.bs.collapse', ()=> $('#addCollapseIcon').removeClass('fa-chevron-up').addClass('fa-chevron-down'));
-  }
-});
-
-/* 初始化（含 PWA 註冊） */
-$(function(){
-  assignments = SLOTS.map(s=> Array(s.roles.length).fill(null).map(()=>[]));
-  sortSlots();
-  if(SLOTS.length) getPeopleForProject(SLOTS[0].project);
-  buildSlotList();
-  renderFocus();
-  buildPeoplePool();
-  applyLayoutByRightVisibility();
-
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
-  }
-});
-</script>
-
-<!-- ====== Google Sheet 橋接層：覆蓋儲存/載入至 Apps Script ====== -->
-<script>
-/** 將 GAS_URL 改成你部署的 Apps Script Web App URL */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxPMBrwJ_ik_MTcDRXKCo6BF9dkoD8H2Yw3goORMyETnST7vF1kGYG3TxkEsFqOMFMG/exec';
-
-/** 以目前聚焦時段的專案名當 key（沒有就 default） */
-function currentKey() {
-  try {
-    const s = (typeof SLOTS !== 'undefined' && SLOTS[focusIdx]) ? SLOTS[focusIdx] : null;
-    const pj = s && s.project ? String(s.project).trim() : '';
-    return pj || 'default';
-  } catch (_) {
-    return 'default';
-  }
+/* ==== Google Apps Script 橋接（請把 GAS_URL 換成你的 .../exec） ==== */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwhnSDTSo-IaGcQpgLI-Ui6o0xEjcRhQX-ipeM-PuWuwqDE4EX7kr4UPZrg5Zpr6RxF/exec';
+function currentKey(){
+  const s = SLOTS[focusIdx];
+  return s?.project ? s.project : 'default';
 }
-
 async function saveToSheet() {
-  if (window.event && window.event.altKey) {
-    localStorage.setItem("dragRoster.pwa.smartpool.editToggle.navbar.v6", JSON.stringify(getSnapshot()));
-    alert('已儲存（LocalStorage 備援）');
-    return;
-  }
   if (!GAS_URL || GAS_URL.startsWith('PUT_YOUR')) { alert('請先設定 GAS_URL'); return; }
-  const snapshot = getSnapshot();
+  const snapshot = JSON.stringify(getSnapshot());
   const key = currentKey();
   try {
-    const res = await fetch(`${GAS_URL}?action=write`, {
+    const body = new URLSearchParams();
+    body.set('action', 'write');
+    body.set('key', key);
+    body.set('snapshot', snapshot);
+    const res = await fetch(GAS_URL, {
       method: 'POST',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify({ key, snapshot })
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, // 避免 preflight
+      body
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'write failed');
@@ -1182,23 +1126,12 @@ async function saveToSheet() {
     alert('寫入雲端失敗：' + err.message);
   }
 }
-
 async function loadFromSheet() {
-  if (window.event && window.event.altKey) {
-    const txt = localStorage.getItem("dragRoster.pwa.smartpool.editToggle.navbar.v6");
-    if (!txt) return alert('LocalStorage 尚無資料');
-    try {
-      const snap = JSON.parse(txt);
-      setSnapshot(snap) ? alert('已載入（LocalStorage 備援）') : alert('LocalStorage 格式不符');
-    } catch {
-      alert('LocalStorage 解析失敗');
-    }
-    return;
-  }
   if (!GAS_URL || GAS_URL.startsWith('PUT_YOUR')) { alert('請先設定 GAS_URL'); return; }
   const key = currentKey();
   try {
-    const res = await fetch(`${GAS_URL}?action=read&key=${encodeURIComponent(key)}`);
+    const url = `${GAS_URL}?action=read&key=${encodeURIComponent(key)}`;
+    const res = await fetch(url, { method: 'GET' });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'read failed');
     setSnapshot(data.snapshot);
@@ -1208,19 +1141,42 @@ async function loadFromSheet() {
     alert('讀取雲端失敗：' + err.message);
   }
 }
+$('#btnSave').on('click', (e)=>{ e.preventDefault(); saveToSheet(); });
+$('#btnLoad').on('click', (e)=>{ e.preventDefault(); loadFromSheet(); });
 
-/* 覆蓋按鈕事件（解除原綁定 → 綁到 GAS） */
+/* ==== 初始化（Bootstrap + SW + 收合圖示） ==== */
+(function ensureBS(){
+  if(window.bootstrap) return;
+  const s=document.createElement("script");
+  s.src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js";
+  document.body.appendChild(s);
+})();
 $(function(){
-  if ($('#btnSave').length) {
-    $('#btnSave').off('click').on('click', function(e){ e.preventDefault(); saveToSheet(); });
-  }
-  if ($('#btnLoad').length) {
-    $('#btnLoad').off('click').on('click', function(e){ e.preventDefault(); loadFromSheet(); });
+  assignments = SLOTS.map(s=> Array(s.roles.length).fill(null).map(()=>[]));
+  sortSlots();
+  if(SLOTS.length) getPeopleForProject(SLOTS[0].project);
+  buildSlotList();
+  renderFocus();
+  buildPeoplePool();
+  applyLayoutByRightVisibility();
+
+  // 新增時段收合圖示切換
+  const addCollapseEl = document.getElementById('addCollapse');
+  addCollapseEl.addEventListener('shown.bs.collapse', ()=> $('#addCollapseIcon').removeClass('fa-chevron-down').addClass('fa-chevron-up'));
+  addCollapseEl.addEventListener('hidden.bs.collapse', ()=> $('#addCollapseIcon').removeClass('fa-chevron-up').addClass('fa-chevron-down'));
+
+  // PWA：註冊 Service Worker
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
 });
+
+/* 小工具：供刪除時段時把已指派的人放回池 */
+function moveToPoolDOM(name){ moveNameToPoolDOM(name); }
 </script>
 
-<!-- 只載一次 Bootstrap Bundle（含 Popper） -->
+<!-- Bootstrap Bundle（含 Popper；放在檔尾確保 Navbar toggler 正常） -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+
 </body>
 </html>
