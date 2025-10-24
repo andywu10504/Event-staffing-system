@@ -343,23 +343,27 @@
 
 <script>
 /* ====== 0) 後端 Web App URL（請改成你的 Apps Script Web App 部署網址） ====== */
-const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzufLCMj261gH-2smcSUUf3Qq1u9vpPpuU3_BgM9I4ohkOOVO3iENEB3aAqYpYxs56V/exec';
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbw3B15xmpUKo9TgYLfG3bmFpoteYzx5TyqvbTiOyxrWg0hRs8oloIELIDNukFf4I_Qn/exec';
 
-/* ====== 0.1) 伺服器 API ====== */
+/* ====== 0.1) 伺服器 API（改這裡） ====== */
 async function apiLoad() {
-  const res = await fetch(WEBAPP_URL + '?op=load', { method:'GET' });
+  const res = await fetch(WEBAPP_URL + '?op=load', { method:'GET', cache: 'no-cache' });
   if (!res.ok) throw new Error('load failed');
   return res.json();
 }
+
 async function apiSave(snapshot) {
+  // 重要：用 text/plain 避免 CORS 預檢（OPTIONS）
   const res = await fetch(WEBAPP_URL, {
     method:'POST',
-    headers: { 'Content-Type':'application/json' },
-    body: JSON.stringify({ op:'save', snapshot })
+    headers: { 'Content-Type':'text/plain;charset=utf-8' },
+    body: JSON.stringify({ op:'save', snapshot })   // body 傳純文字 JSON
   });
+  // 用 text/plain 就不會有預檢；而 Apps Script 仍會回 200/JSON
   if (!res.ok) throw new Error('save failed');
   return res.json();
 }
+  
 function apiExportCSV() {
   // 直接開啟伺服器 CSV 下載
   window.open(WEBAPP_URL + '?op=export_csv', '_blank');
